@@ -21,3 +21,7 @@ app.include_router(api_router, prefix=settings.API_PREFIX)
 async def health_check():
     """Checks if server is active."""
     return {"status": "active"}
+
+@app.get("/")  # Make sure this route exists
+def home():
+    return {"message": "Welcome to FastAPI!"}
