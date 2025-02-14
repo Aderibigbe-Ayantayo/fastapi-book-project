@@ -1,12 +1,12 @@
-name: CI Pipeline
+name: deploy
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
 jobs:
-  test:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,7 +19,7 @@ jobs:
           python -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-      - name: Run tests
+      - name: Deploy application
         run: |
-          source venv/bin/activate
-          pytest
+          # Add deployment steps here (e.g., deploying to a server or cloud platform)
+          echo "Deployment logic goes here"
