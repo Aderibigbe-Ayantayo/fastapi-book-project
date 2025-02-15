@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest    #progress
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
@@ -23,3 +23,5 @@ jobs:
         run: |
           source venv/bin/activate
           pytest
+
+          
