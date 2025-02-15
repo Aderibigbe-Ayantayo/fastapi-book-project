@@ -22,6 +22,10 @@ async def health_check():
     """Checks if server is active."""
     return {"status": "active"}
 
-@app.get("/")  # Make sure this route exists
+@app.get("/")  
 def home():
     return {"message": "Welcome to FastAPI!"}
+
+@app.get("/stage2")
+def stage2():
+    return {"message": "Stage 2 endpoint is working!"}
