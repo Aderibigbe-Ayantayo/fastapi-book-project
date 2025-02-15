@@ -26,6 +26,3 @@ async def health_check():
 def home():
     return {"message": "Welcome to FastAPI!"}
 
-@app.get("/stage2")
-def stage2():
-    return {"message": "Stage 2 endpoint is working!"}
