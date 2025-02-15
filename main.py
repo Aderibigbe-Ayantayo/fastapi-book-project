@@ -26,3 +26,7 @@ async def health_check():
 def home():
     return {"message": "Welcome to FastAPI!"}
 
+
+@app.get("/stage2")
+async def stage2():
+    return {"message": "welcome to stage 2"}
