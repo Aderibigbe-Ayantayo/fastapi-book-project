@@ -82,62 +82,52 @@
 #             uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
 #           EOF
 
-
 name: deploy
-
 on:
   push:
     branches:
-      - main  
-
+      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: "3.9"
-
-      - name: Install Dependencies
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-
-      - name: Deploy to EC2
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
-          DEPLOY_USER: ubuntu
-          PROJECT_DIR: ~/fastapi-book-project
-          APP_COMMAND: "uvicorn main:app --host 0.0.0.0 --port 8000"
-        run: |
-          # Save the SSH private key and set permissions
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-
-          # SSH into the EC2 instance and deploy the application
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $DEPLOY_USER@$EC2_PUBLIC_IP << 'EOF'
-            set -e  # Exit on error
-            cd $PROJECT_DIR
-
-            # Pull the latest changes
-            git fetch origin
-            git reset --hard origin/main
-
-            # Set up the virtual environment if it doesn't exist
-            if [ ! -d "venv" ]; then
-              python -m venv venv
-            fi
-
-            # Activate the virtual environment and install dependencies
-            source venv/bin/activate
-            pip install -r requirements.txt
-
-            # Restart the application using a process manager (e.g., systemd)
-            sudo systemctl restart fastapi-app.service
-          EOF
+          python-version: 3.11
+      # Deploy to server
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{secrets.EC2_PUBLIC_IP}}
+          key: ${{secrets.EC2_SSH_KEY}}
+          username: ${{secrets.SERVER_USERNAME}}
+          script: |
+            echo “Starting deployment...”
+            # Create and navigate to project directory
+            mkdir -p aderibigbe-fastapi-stage12-task
+            cd aderibigbe-fastapi-stage12-task
+            # Clone the repository into the project directory
+            git clone https://github.com/Aderibigbe-Ayantayo/fastapi-book-project.git .
+            # Pull latest changes
+            echo “Pulling latest changes...”
+            git fetch --all
+            git pull origin main
+            # Setup virtual environment
+            echo “Setting up virtual environment...”
+            python3 -m venv venv || exit 1
+            source venv/bin/activate || exit 1
+            #Install fastapi
+            pip install fastapi || exit 1
+            echo “FastAPI installed successfully”
+            # Install dependencies
+            echo “Installing dependencies...”
+            pip install -r requirements.txt || exit 1
+            # Stop existing application if running
+            echo “Stopping existing application...”
+            killall uvicorn || echo “No existing process found”
+            echo “Application stopped successfully”
+            # Start application
+            echo “Starting application...”
+            nohup uvicorn main:app --host 0.0.0.0 --port 8000 > app.log 2>&1 &
+            echo “Application started successfully”
