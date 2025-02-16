@@ -1,9 +1,94 @@
+# name: deploy
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.9"
+
+#       - name: Install Dependencies
+#         run: |
+#           python -m venv venv
+#           source venv/bin/activate
+#           pip install -r requirements.txt
+
+#       - name: Deploy Application to EC2
+#         env:
+#           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  #brain
+#           EC2_USER: ubuntu
+#           EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }}
+#         run: |
+#           echo "$SSH_PRIVATE_KEY" > private_key.pem
+#           chmod 600 private_key.pem
+#           ssh -o StrictHostKeyChecking=no -i private_key.pem $EC2_USER@$EC2_HOST <<EOF
+#             cd ~/fastapi-book-project
+#             git pull origin main
+#             source venv/bin/activate
+#             pip install -r requirements.txt
+#             sudo systemctl restart fastapi
+#             sudo systemctl restart nginx
+#           EOF
+
+
+
+# name: deploy
+
+# on:
+#   push:
+#     branches:
+#       - main  # Trigger deployment on push to main
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v3
+
+#       - name: Set up Python
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.9"
+
+#       - name: Install Dependencies
+#         run: |
+#           python -m venv venv
+#           source venv/bin/activate
+#           pip install -r requirements.txt
+
+#       - name: Deploy to EC2
+#         env:
+#           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+#           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+#           DEPLOY_USER: ubuntu
+#         run: |
+#           echo "$SSH_PRIVATE_KEY" > private_key.pem
+#           chmod 600 private_key.pem
+#           ssh -o StrictHostKeyChecking=no -i private_key.pem $DEPLOY_USER@$EC2_PUBLIC_IP << 'EOF'
+#             cd ~/fastapi-book-project
+#             git pull origin main
+#             source venv/bin/activate
+#             uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+#           EOF
+
+
 name: deploy
 
 on:
   push:
     branches:
-      - main
+      - main  # Trigger deployment on push to main
 
 jobs:
   deploy:
@@ -23,19 +108,27 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-      - name: Deploy Application to EC2
+      - name: Deploy to EC2
         env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}  #brain
-          EC2_USER: ubuntu
-          EC2_HOST: ${{ secrets.EC2_PUBLIC_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
+          DEPLOY_USER: ubuntu
         run: |
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
-          ssh -o StrictHostKeyChecking=no -i private_key.pem $EC2_USER@$EC2_HOST <<EOF
+          ssh -o StrictHostKeyChecking=no -i private_key.pem $DEPLOY_USER@$EC2_PUBLIC_IP << 'EOF'
+            # Navigate to project
             cd ~/fastapi-book-project
+
+            # Pull latest code
             git pull origin main
+
+            # Activate virtual environment
             source venv/bin/activate
-            pip install -r requirements.txt
-            sudo systemctl restart fastapi
-            sudo systemctl restart nginx
+
+            # Stop existing FastAPI service (if any)
+            sudo systemctl stop fastapi || true
+
+            # Restart FastAPI service
+            sudo systemctl start fastapi
           EOF
