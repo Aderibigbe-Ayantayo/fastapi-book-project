@@ -88,7 +88,7 @@ name: deploy
 on:
   push:
     branches:
-      - main  # Trigger deployment on push to main
+      - main  
 
 jobs:
   deploy:
@@ -113,22 +113,31 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           EC2_PUBLIC_IP: ${{ secrets.EC2_PUBLIC_IP }}
           DEPLOY_USER: ubuntu
+          PROJECT_DIR: ~/fastapi-book-project
+          APP_COMMAND: "uvicorn main:app --host 0.0.0.0 --port 8000"
         run: |
+          # Save the SSH private key and set permissions
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
+
+          # SSH into the EC2 instance and deploy the application
           ssh -o StrictHostKeyChecking=no -i private_key.pem $DEPLOY_USER@$EC2_PUBLIC_IP << 'EOF'
-            # Navigate to project
-            cd ~/fastapi-book-project
+            set -e  # Exit on error
+            cd $PROJECT_DIR
 
-            # Pull latest code
-            git pull origin main
+            # Pull the latest changes
+            git fetch origin
+            git reset --hard origin/main
 
-            # Activate virtual environment
+            # Set up the virtual environment if it doesn't exist
+            if [ ! -d "venv" ]; then
+              python -m venv venv
+            fi
+
+            # Activate the virtual environment and install dependencies
             source venv/bin/activate
+            pip install -r requirements.txt
 
-            # Stop existing FastAPI service (if any)
-            sudo systemctl stop fastapi || true
-
-            # Restart FastAPI service
-            sudo systemctl start fastapi
+            # Restart the application using a process manager (e.g., systemd)
+            sudo systemctl restart fastapi-app.service
           EOF
